@@ -20,14 +20,6 @@ type (
 		CreatedAt time.Time          `bson:"created_at" json:"createdAt"`       // Timestamp for creation
 	}
 
-	Client struct {
-		ID       string
-		Username string
-		Conn     *websocket.Conn
-		JoinedAt time.Time
-		Send     chan []byte
-	}
-
 	// Room represents a chat room entity.
 	Room struct {
 		ID         primitive.ObjectID          `bson:"_id,omitempty" json:"id,omitempty"` // Room identifier

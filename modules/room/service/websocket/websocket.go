@@ -1,4 +1,4 @@
-package services
+package websocket
 
 import (
 	"encoding/json"
@@ -23,9 +23,9 @@ type (
 
 	WebSocketRoomService interface {
 		Run(roomID string)
-		RegisterClient(roomID string, client *entities.Client) error
-		CreateRoom(name string, admin *entities.Client) *entities.Room
-		Unregister(roomID string, client *entities.Client) error
+		RegisterClient(roomID string, client *Client) error
+		CreateRoom(name string, admin *Client) *entities.Room
+		Unregister(roomID string, client *Client) error
 	}
 )
 
@@ -36,7 +36,7 @@ func NewWebSocketRoomService(roomRepository repository.RoomRepository) WebSocket
 	}
 }
 
-func (service *webSocketRoomService) CreateRoom(name string, admin *entities.Client) *entities.Room {
+func (s *webSocketRoomService) CreateRoom(name string, admin *Client) *entities.Room {
 	roomID := primitive.NewObjectID().Hex()
 	room := &entities.Room{
 		ID:         primitive.NewObjectID(),
@@ -44,22 +44,40 @@ func (service *webSocketRoomService) CreateRoom(name string, admin *entities.Cli
 		Admin:      admin,
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
-		Clients:    make(map[*websocket.Conn]*entities.Client),
+		Clients:    make(map[*websocket.Conn]*Client),
 		Broadcast:  make(chan *entities.Message),
-		Register:   make(chan *entities.Client),
-		Unregister: make(chan *entities.Client),
+		Register:   make(chan *Client),
+		Unregister: make(chan *Client),
 		Mu:         sync.Mutex{},
 	}
 
 	log.Printf("Room created, room id: %s", roomID)
 
-	service.mu.Lock()
-	service.Rooms[roomID] = room
-	service.mu.Unlock()
+	s.mu.Lock()
+	s.Rooms[roomID] = room
+	s.mu.Unlock()
 
-	go service.Run(roomID)
+	go s.Run(roomID)
 
 	return room
+}
+
+func (s *webSocketRoomService) HandleWebSocket(conn *websocket.Conn, roomID string, username string) error {
+	// Create a new client instance
+	client := NewClient(username, username, conn)
+
+	// Register the client with the room
+	err := s.RegisterClient(roomID, client)
+	if err != nil {
+		conn.Close()
+		return err
+	}
+
+	// Start the ReadPump and WritePump as goroutines
+	go client.ReadPump(s.Rooms[roomID]) // Start reading messages from client and forwarding to Broadcast
+	// go client.WritePump() // Start sending messages from Send channel to client
+
+	return nil
 }
 
 func (service *webSocketRoomService) Run(roomID string) {
@@ -119,10 +137,10 @@ func (service *webSocketRoomService) Run(roomID string) {
 	}
 }
 
-func (service *webSocketRoomService) RegisterClient(roomID string, client *entities.Client) error {
-	service.mu.Lock()
-	room, exists := service.Rooms[roomID]
-	service.mu.Unlock()
+func (s *webSocketRoomService) RegisterClient(roomID string, client *Client) error {
+	s.mu.Lock()
+	room, exists := s.Rooms[roomID]
+	s.mu.Unlock()
 
 	if !exists {
 		return errors.New("Room ID doesn't exist")
@@ -133,10 +151,10 @@ func (service *webSocketRoomService) RegisterClient(roomID string, client *entit
 	return nil
 }
 
-func (service *webSocketRoomService) Unregister(roomID string, client *entities.Client) error {
-	service.mu.Lock()
-	room, exists := service.Rooms[roomID]
-	service.mu.Unlock()
+func (s *webSocketRoomService) Unregister(roomID string, client *Client) error {
+	s.mu.Lock()
+	room, exists := s.Rooms[roomID]
+	s.mu.Unlock()
 
 	if !exists {
 		return errors.New("Room ID doesn't exist")
