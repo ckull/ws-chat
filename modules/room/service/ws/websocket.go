@@ -1,4 +1,4 @@
-package websocket
+package ws
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 	"ws-chat/modules/entities"
+	"ws-chat/modules/room/models"
 	"ws-chat/modules/room/repository"
 
 	"github.com/gorilla/websocket"
@@ -36,7 +37,7 @@ func NewWebSocketRoomService(roomRepository repository.RoomRepository) WebSocket
 	}
 }
 
-func (s *webSocketRoomService) CreateRoom(name string, admin *Client) *entities.Room {
+func (s *webSocketRoomService) CreateRoom(name string, admin *models.Client) *entities.Room {
 	roomID := primitive.NewObjectID().Hex()
 	room := &entities.Room{
 		ID:         primitive.NewObjectID(),
@@ -44,10 +45,10 @@ func (s *webSocketRoomService) CreateRoom(name string, admin *Client) *entities.
 		Admin:      admin,
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
-		Clients:    make(map[*websocket.Conn]*Client),
+		Clients:    make(map[*websocket.Conn]*models.Client),
 		Broadcast:  make(chan *entities.Message),
-		Register:   make(chan *Client),
-		Unregister: make(chan *Client),
+		Register:   make(chan *models.Client),
+		Unregister: make(chan *models.Client),
 		Mu:         sync.Mutex{},
 	}
 

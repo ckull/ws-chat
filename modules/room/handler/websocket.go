@@ -4,22 +4,21 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-	"ws-chat/modules/entities"
-	services "ws-chat/modules/room/service"
+	"ws-chat/modules/room/service/ws"
 
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 )
 
 type WebSocketHandler struct {
-	roomService services.WebSocketRoomService
+	roomService ws.WebSocketRoomService
 }
 
 var (
 	upgrader = websocket.Upgrader{}
 )
 
-func NewWebSocketHandler(roomService services.WebSocketRoomService) *WebSocketHandler {
+func NewWebSocketHandler(roomService ws.WebSocketRoomService) *WebSocketHandler {
 	return &WebSocketHandler{roomService: roomService}
 }
 
@@ -32,9 +31,11 @@ func (h *WebSocketHandler) CreateRoom(c echo.Context) error {
 	roomName := c.QueryParam("room")
 	host := c.QueryParam("host")
 
-	client := &entities.Client{Conn: conn, Username: host, Send: make(chan []byte), JoinedAt: time.Now()}
+	client := ws.NewClient(host, conn)
 
 	room := h.roomService.CreateRoom(roomName, client)
+
+	go client.ReadPump()
 
 	msg := fmt.Sprintf(`{"success": "Create room succeeded, %s"}`, room.ID)
 
@@ -59,7 +60,7 @@ func (h *WebSocketHandler) JoinRoom(c echo.Context) error {
 		return conn.WriteMessage(websocket.TextMessage, []byte(errMsg))
 	}
 
-	client := &entities.Client{Conn: conn, Username: userName, Send: make(chan []byte), JoinedAt: time.Now()}
+	client := &ws.Client{Conn: conn, Username: userName, Send: make(chan []byte), JoinedAt: time.Now()}
 
 	err = h.roomService.RegisterClient(roomID, client)
 	if err != nil {

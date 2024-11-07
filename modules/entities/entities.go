@@ -3,6 +3,7 @@ package entities
 import (
 	"sync"
 	"time"
+	"ws-chat/modules/room/models"
 
 	"github.com/gorilla/websocket"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -22,15 +23,15 @@ type (
 
 	// Room represents a chat room entity.
 	Room struct {
-		ID         primitive.ObjectID          `bson:"_id,omitempty" json:"id,omitempty"` // Room identifier
-		Name       string                      `bson:"name" json:"name"`                  // Room name
-		Admin      *Client                     `bson:"admin" json:"admin"`                // Admin's WebSocket connection (not stored)
-		CreatedAt  time.Time                   `bson:"created_at" json:"createdAt"`       // Timestamp for creation
-		UpdatedAt  time.Time                   `bson:"updated_at" json:"updatedAt"`       // Timestamp for the last update
-		Clients    map[*websocket.Conn]*Client // Map of WebSocket connections to User (not stored in MongoDB or JSON)
-		Broadcast  chan *Message               // Channel for broadcasting messages (not stored)
-		Register   chan *Client
-		Unregister chan *Client
+		ID         primitive.ObjectID         `bson:"_id,omitempty" json:"id,omitempty"` // Room identifier
+		Name       string                     `bson:"name" json:"name"`                  // Room name
+		Admin      *models.Client             `bson:"admin" json:"admin"`                // Admin's WebSocket connection (not stored)
+		CreatedAt  time.Time                  `bson:"created_at" json:"createdAt"`       // Timestamp for creation
+		UpdatedAt  time.Time                  `bson:"updated_at" json:"updatedAt"`       // Timestamp for the last update
+		Clients    map[string]*websocket.Conn // Map of WebSocket connections to User (not stored in MongoDB or JSON)
+		Broadcast  chan *Message              // Channel for broadcasting messages (not stored)
+		Register   chan *models.Client
+		Unregister chan *models.Client
 		Mu         sync.Mutex // Mutex for thread-safe operations (not stored)
 	}
 

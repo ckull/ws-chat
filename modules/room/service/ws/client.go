@@ -1,27 +1,23 @@
-package websocket
+package ws
 
 import (
 	"encoding/json"
 	"log"
 	"time"
 	"ws-chat/modules/entities"
+	"ws-chat/modules/room/models"
 
 	"github.com/gorilla/websocket"
 )
 
 type (
-	Client struct {
-		ID       string
-		Username string
-		Conn     *websocket.Conn
-		JoinedAt time.Time
-		Send     chan []byte
+	IClient interface {
+		ReadPump(room *entities.Room)
 	}
 )
 
-func NewClient(ID string, Username string, conn *websocket.Conn) *Client {
-	return &Client{
-		ID:       ID,
+func NewClient(Username string, conn *websocket.Conn) IClient {
+	return &models.Client{
 		Username: Username,
 		Conn:     conn,
 		JoinedAt: time.Now(),
@@ -29,7 +25,7 @@ func NewClient(ID string, Username string, conn *websocket.Conn) *Client {
 	}
 }
 
-func (client *Client) ReadPump(room *entities.Room) {
+func (client *models.Client) ReadPump(room *entities.Room) {
 
 	for {
 		// Read a message from the WebSocket connection
