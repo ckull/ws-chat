@@ -13,6 +13,8 @@ import (
 type (
 	IClient interface {
 		ReadPump(room *entities.Room)
+		GetUsername() string
+		GetJoinedAt() string
 	}
 )
 
@@ -25,13 +27,21 @@ func NewClient(Username string, conn *websocket.Conn) IClient {
 	}
 }
 
-func (client *models.Client) ReadPump(room *entities.Room) {
+func (c *models.Client) GetUsername() string {
+	return c.Username
+}
+
+func (c *models.Client) GetJoinedAt() string {
+	return c.JoinedAt.String()
+}
+
+func (c *models.Client) ReadPump(room *entities.Room) {
 
 	for {
 		// Read a message from the WebSocket connection
-		_, messageData, err := client.Conn.ReadMessage()
+		_, messageData, err := c.Conn.ReadMessage()
 		if err != nil {
-			log.Printf("Error reading message from %s: %v", client.Username, err)
+			log.Printf("Error reading message from %s: %v", c.Username, err)
 			break
 		}
 
@@ -39,7 +49,7 @@ func (client *models.Client) ReadPump(room *entities.Room) {
 		var msg entities.Message
 		err = json.Unmarshal(messageData, &msg)
 		if err != nil {
-			log.Printf("Error unmarshaling message from %s: %v", client.Username, err)
+			log.Printf("Error unmarshaling message from %s: %v", c.Username, err)
 			continue
 		}
 
